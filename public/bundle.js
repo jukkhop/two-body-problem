@@ -475,33 +475,21 @@ var PS = {};
   var $$Math = $PS["Math"];
   var Web_HTML = $PS["Web.HTML"];
   var Web_HTML_Window = $PS["Web.HTML.Window"];                
-  var timeStep = 1.0;
-  var pixelRatio = 2.0;
-  var scaleCanvas = function (wind) {
-      return function (canv) {
-          return function (ctx) {
-              return function __do() {
-                  var v = Web_HTML_Window.innerWidth(wind)();
-                  var v1 = Web_HTML_Window.innerHeight(wind)();
-                  Graphics_Canvas.setCanvasWidth(canv)(pixelRatio * Data_Int.toNumber(v))();
-                  Graphics_Canvas.setCanvasHeight(canv)(pixelRatio * Data_Int.toNumber(v1))();
-                  return Graphics_Canvas.scale(ctx)({
-                      scaleX: pixelRatio,
-                      scaleY: pixelRatio
-                  })();
-              };
-          };
-      };
-  };
   var initialVelocity = function (ratio) {
       return function (ecc) {
           return $$Math.sqrt(1.0 + ratio) * (1.0 + ecc);
       };
   };
-  var gravityConst = 1.0;
-  var eccentricity = 0.75;
-  var bodyRadius = 7.0;
-  var bodyColor = "#ffffff";
+  var consts = {
+      eccentricity: 0.75,
+      gravity: 1.0,
+      timeStep: 1.0
+  };
+  var config = {
+      bodyColor: "#ffffff",
+      bodyRadius: 7.0,
+      pixelRatio: 2.0
+  };
   var render = function (v) {
       return function (ctx) {
           return function (stateRef) {
@@ -515,24 +503,40 @@ var PS = {};
                   })();
                   Graphics_Canvas.beginPath(ctx)();
                   var end = 2.0 * $$Math.pi;
-                  Graphics_Canvas.moveTo(ctx)(v1.body1.x + bodyRadius)(v1.body1.y)();
+                  Graphics_Canvas.moveTo(ctx)(v1.body1.x + config.bodyRadius)(v1.body1.y)();
                   Graphics_Canvas.arc(ctx)({
                       x: v1.body1.x,
                       y: v1.body1.y,
-                      radius: bodyRadius,
+                      radius: config.bodyRadius,
                       start: 0.0,
                       end: end
                   })();
-                  Graphics_Canvas.moveTo(ctx)(v1.body2.x + bodyRadius)(v1.body2.y)();
+                  Graphics_Canvas.moveTo(ctx)(v1.body2.x + config.bodyRadius)(v1.body2.y)();
                   Graphics_Canvas.arc(ctx)({
                       x: v1.body2.x,
                       y: v1.body2.y,
-                      radius: bodyRadius,
+                      radius: config.bodyRadius,
                       start: 0.0,
                       end: end
                   })();
-                  Graphics_Canvas.setFillStyle(ctx)(bodyColor)();
+                  Graphics_Canvas.setFillStyle(ctx)(config.bodyColor)();
                   return Graphics_Canvas.fill(ctx)();
+              };
+          };
+      };
+  };
+  var scaleCanvas = function (wind) {
+      return function (canv) {
+          return function (ctx) {
+              return function __do() {
+                  var v = Web_HTML_Window.innerWidth(wind)();
+                  var v1 = Web_HTML_Window.innerHeight(wind)();
+                  Graphics_Canvas.setCanvasWidth(canv)(config.pixelRatio * Data_Int.toNumber(v))();
+                  Graphics_Canvas.setCanvasHeight(canv)(config.pixelRatio * Data_Int.toNumber(v1))();
+                  return Graphics_Canvas.scale(ctx)({
+                      scaleX: config.pixelRatio,
+                      scaleY: config.pixelRatio
+                  })();
               };
           };
       };
@@ -541,7 +545,7 @@ var PS = {};
       return function (m2) {
           return function (radius) {
               return function (unitVector) {
-                  var scalar = (gravityConst * m1 * m2) / $$Math.pow(radius)(2.0);
+                  var scalar = (consts.gravity * m1 * m2) / $$Math.pow(radius)(2.0);
                   var accelY = scalar * unitVector.y;
                   var accelX = scalar * unitVector.x;
                   return {
@@ -574,17 +578,17 @@ var PS = {};
                       var newState = {
                           body1: {
                               mass: v.body1.mass,
-                              x: v.body1.x + v.body1.vx * timeStep,
-                              y: v.body1.y + v.body1.vy * timeStep,
-                              vx: v.body1.vx + accel1.x * timeStep,
-                              vy: v.body1.vy + accel1.y * timeStep
+                              x: v.body1.x + v.body1.vx * consts.timeStep,
+                              y: v.body1.y + v.body1.vy * consts.timeStep,
+                              vx: v.body1.vx + accel1.x * consts.timeStep,
+                              vy: v.body1.vy + accel1.y * consts.timeStep
                           },
                           body2: {
                               mass: v.body2.mass,
-                              x: v.body2.x + v.body2.vx * timeStep,
-                              y: v.body2.y + v.body2.vy * timeStep,
-                              vx: v.body2.vx + accel2.x * timeStep,
-                              vy: v.body2.vy + accel2.y * timeStep
+                              x: v.body2.x + v.body2.vx * consts.timeStep,
+                              y: v.body2.y + v.body2.vy * consts.timeStep,
+                              vx: v.body2.vx + accel2.x * consts.timeStep,
+                              vy: v.body2.vy + accel2.y * consts.timeStep
                           }
                       };
                       Effect_Ref.write(newState)(stateRef)();
@@ -603,23 +607,23 @@ var PS = {};
       if (v instanceof Data_Maybe.Just) {
           var v1 = Graphics_Canvas.getContext2D(v.value0)();
           var v2 = Web_HTML.window();
-          scaleCanvas(v2)(v.value0)(v1)();
           var v3 = Web_HTML_Window.innerWidth(v2)();
           var v4 = Web_HTML_Window.innerHeight(v2)();
+          scaleCanvas(v2)(v.value0)(v1)();
           var state = {
               body1: {
                   mass: 21.5,
                   x: 400.0,
                   y: 400.0,
                   vx: 0.0,
-                  vy: -initialVelocity(1.0)(eccentricity)
+                  vy: -initialVelocity(1.0)(consts.eccentricity)
               },
               body2: {
                   mass: 21.5,
                   x: 450.0,
                   y: 400.0,
                   vx: 0.0,
-                  vy: initialVelocity(1.0)(eccentricity)
+                  vy: initialVelocity(1.0)(consts.eccentricity)
               }
           };
           var dims = {
@@ -629,14 +633,10 @@ var PS = {};
           var v5 = Effect_Ref["new"](state)();
           return Data_Functor["void"](Effect.functorEffect)(Web_HTML_Window.requestAnimationFrame(update(v2)(dims)(v1)(v5))(v2))();
       };
-      throw new Error("Failed pattern match at Main (line 48, column 3 - line 77, column 72): " + [ v.constructor.name ]);
+      throw new Error("Failed pattern match at Main (line 55, column 3 - line 87, column 72): " + [ v.constructor.name ]);
   };
-  exports["bodyRadius"] = bodyRadius;
-  exports["bodyColor"] = bodyColor;
-  exports["pixelRatio"] = pixelRatio;
-  exports["eccentricity"] = eccentricity;
-  exports["gravityConst"] = gravityConst;
-  exports["timeStep"] = timeStep;
+  exports["consts"] = consts;
+  exports["config"] = config;
   exports["main"] = main;
   exports["initialVelocity"] = initialVelocity;
   exports["update"] = update;

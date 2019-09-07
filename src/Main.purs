@@ -13,22 +13,15 @@ import Web.HTML (Window, window)
 import Web.HTML.Window (innerHeight, innerWidth, requestAnimationFrame)
 
 type Constants = {
-  bodyColor :: String,
-  bodyRadius :: Number,
   eccentricity :: Number,
   gravity :: Number,
-  pixelRatio :: Number,
   timeStep :: Number
 }
 
-consts :: Constants
-consts = {
-  bodyColor: "#ffffff",
-  bodyRadius: 7.0,
-  eccentricity: 0.75,
-  gravity: 1.0,
-  pixelRatio: 2.0,
-  timeStep: 1.0
+type Config = {
+  bodyColor :: String,
+  bodyRadius :: Number,
+  pixelRatio :: Number
 }
 
 type Body
@@ -41,6 +34,20 @@ type Body
 
 type State = { body1 :: Body, body2 :: Body }
 type Vector = { x :: Number, y :: Number }
+
+consts :: Constants
+consts = {
+  eccentricity: 0.75,
+  gravity: 1.0,
+  timeStep: 1.0
+}
+
+config :: Config
+config = {
+  bodyColor: "#ffffff",
+  bodyRadius: 7.0,
+  pixelRatio: 2.0
+}
 
 main :: Effect Unit
 main = do
@@ -135,7 +142,7 @@ render { width, height } ctx stateRef = do
   beginPath ctx
   
   let
-    { bodyColor: color, bodyRadius: radius } = consts
+    { bodyColor: color, bodyRadius: radius } = config
     start = 0.0
     end = 2.0 * pi
   
@@ -152,7 +159,7 @@ scaleCanvas :: Window -> CanvasElement -> Context2D -> Effect Unit
 scaleCanvas wind canv ctx = do
   width <- innerWidth wind
   height <- innerHeight wind
-  let { pixelRatio: ratio } = consts
+  let { pixelRatio: ratio } = config
   setCanvasWidth canv (ratio * (toNumber width))
   setCanvasHeight canv (ratio * (toNumber height))
   scale ctx { scaleX: ratio, scaleY: ratio }
