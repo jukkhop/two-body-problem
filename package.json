@@ -1,0 +1,23 @@
+{
+  "author": "",
+  "description": "",
+  "keywords": [],
+  "license": "ISC",
+  "main": "index.js",
+  "name": "two-body-problem",
+  "version": "1.0.0",
+  "scripts": {
+    "browserify": "pulp browserify",
+    "bundle": "pulp build -O --to ./public/bundle.js",
+    "build": "pulp build",
+    "run": "pulp run",
+    "serve": "node ./server/server.js"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "path": "^0.12.7"
+  },
+  "devDependencies": {
+    "purty": "^4.5.1"
+  }
+}
