@@ -12,23 +12,24 @@ import Math (pi, pow, sqrt)
 import Web.HTML (Window, window)
 import Web.HTML.Window (innerHeight, innerWidth, requestAnimationFrame)
 
-bodyRadius :: Number
-bodyRadius = 7.0
+type Constants = {
+  bodyColor :: String,
+  bodyRadius :: Number,
+  eccentricity :: Number,
+  gravity :: Number,
+  pixelRatio :: Number,
+  timeStep :: Number
+}
 
-bodyColor :: String
-bodyColor = "#ffffff"
-
-pixelRatio :: Number
-pixelRatio = 2.0
-
-eccentricity :: Number
-eccentricity = 0.75
-
-gravityConst :: Number
-gravityConst = 1.0
-
-timeStep :: Number
-timeStep = 1.0
+consts :: Constants
+consts = {
+  bodyColor: "#ffffff",
+  bodyRadius: 7.0,
+  eccentricity: 0.75,
+  gravity: 1.0,
+  pixelRatio: 2.0,
+  timeStep: 1.0
+}
 
 type Body
   = { mass :: Number
@@ -38,9 +39,8 @@ type Body
     , vy :: Number
     }
 
-type Vector = { x :: Number, y :: Number }
-
 type State = { body1 :: Body, body2 :: Body }
+type Vector = { x :: Number, y :: Number }
 
 main :: Effect Unit
 main = do
@@ -56,20 +56,21 @@ main = do
       scaleCanvas wind canv ctx
 
       let
+        { eccentricity: e } = consts
         state =
           { body1:
             { mass: 21.5
             , x: 400.0
             , y: 400.0
             , vx: 0.0
-            , vy: -(initialVelocity 1.0 eccentricity)
+            , vy: -(initialVelocity 1.0 e)
             }
           , body2:
             { mass: 21.5
             , x: 450.0
             , y: 400.0
             , vx: 0.0
-            , vy: initialVelocity 1.0 eccentricity
+            , vy: initialVelocity 1.0 e
             }
           }
 
@@ -95,7 +96,7 @@ update wind dims ctx stateRef = do
     accel1 = accel body1.mass body2.mass radius unitVect
     accel2 = accel body2.mass body1.mass radius unitVectNeg
 
-    dt = timeStep
+    dt = consts.timeStep
 
     newState =
       { body1:
@@ -121,7 +122,7 @@ update wind dims ctx stateRef = do
 accel :: Number -> Number -> Number -> Vector -> Vector
 accel m1 m2 radius unitVector = do
   let
-    scalar = (gravityConst * m1 * m2) / radius `pow` 2.0
+    scalar = (consts.gravity * m1 * m2) / radius `pow` 2.0
     accelX = scalar * unitVector.x
     accelY = scalar * unitVector.y
 
@@ -134,22 +135,24 @@ render { width, height } ctx stateRef = do
   beginPath ctx
   
   let
+    { bodyColor: color, bodyRadius: radius } = consts
     start = 0.0
     end = 2.0 * pi
+  
+  moveTo ctx (body1.x + radius) body1.y
+  arc ctx { x: body1.x, y: body1.y, radius, start, end }
 
-  moveTo ctx (body1.x + bodyRadius) body1.y
-  arc ctx { x: body1.x, y: body1.y, radius: bodyRadius, start, end }
+  moveTo ctx (body2.x + radius) body2.y
+  arc ctx { x: body2.x, y: body2.y, radius, start, end }
 
-  moveTo ctx (body2.x + bodyRadius) body2.y
-  arc ctx { x: body2.x, y: body2.y, radius: bodyRadius, start, end }
-
-  setFillStyle ctx bodyColor
+  setFillStyle ctx color
   fill ctx
 
 scaleCanvas :: Window -> CanvasElement -> Context2D -> Effect Unit
 scaleCanvas wind canv ctx = do
   width <- innerWidth wind
   height <- innerHeight wind
-  setCanvasWidth canv (pixelRatio * (toNumber width))
-  setCanvasHeight canv (pixelRatio * (toNumber height))
-  scale ctx { scaleX: pixelRatio, scaleY: pixelRatio }
+  let { pixelRatio: ratio } = consts
+  setCanvasWidth canv (ratio * (toNumber width))
+  setCanvasHeight canv (ratio * (toNumber height))
+  scale ctx { scaleX: ratio, scaleY: ratio }
