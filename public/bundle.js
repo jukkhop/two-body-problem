@@ -602,6 +602,7 @@ var PS = {};
   };
   var consts = {
       eccentricity: 0.7,
+      gravity: 10.0,
       massRatio: 1.0,
       timeStep: 5.0e-3
   };
@@ -639,35 +640,23 @@ var PS = {};
           };
       };
   };
-  var render = function (v) {
+  var render = function (dims) {
       return function (ctx) {
           return function (stateRef) {
               return function __do() {
-                  var v1 = Effect_Ref.read(stateRef)();
+                  var v = Effect_Ref.read(stateRef)();
                   var end = 2.0 * $$Math.pi;
                   var def = {
                       x: 0.0,
                       y: 0.0
                   };
-                  var pos1 = Data_Maybe.fromMaybe(def)(Data_Array.index(v1.positions)(0));
-                  var tpos1 = translatePos({
-                      width: v.width,
-                      height: v.height
-                  })({
-                      x: pos1.x,
-                      y: pos1.y
-                  });
-                  var pos2 = Data_Maybe.fromMaybe(def)(Data_Array.index(v1.positions)(1));
-                  var tpos2 = translatePos({
-                      width: v.width,
-                      height: v.height
-                  })({
-                      x: pos2.x,
-                      y: pos2.y
-                  });
+                  var pos1 = Data_Maybe.fromMaybe(def)(Data_Array.index(v.positions)(0));
+                  var tpos1 = translatePos(dims)(pos1);
+                  var pos2 = Data_Maybe.fromMaybe(def)(Data_Array.index(v.positions)(1));
+                  var tpos2 = translatePos(dims)(pos2);
                   Graphics_Canvas.clearRect(ctx)({
-                      width: v.width,
-                      height: v.height,
+                      width: dims.width,
+                      height: dims.height,
                       x: 0.0,
                       y: 0.0
                   })();
@@ -697,7 +686,7 @@ var PS = {};
   var accel = function (radius) {
       return function (unitX) {
           return function (unitY) {
-              var scalar = -(10.0 + consts.massRatio) / $$Math.pow(radius)(2.0);
+              var scalar = -(consts.gravity * consts.massRatio) / $$Math.pow(radius)(2.0);
               var accelY = scalar * unitY;
               var accelX = scalar * unitX;
               return {
@@ -730,11 +719,11 @@ var PS = {};
                           vy: newVy,
                           masses: v.masses,
                           positions: [ {
-                              x: -a2 * newX,
-                              y: -a2 * newY
-                          }, {
                               x: a1 * newX,
                               y: a1 * newY
+                          }, {
+                              x: -a2 * newX,
+                              y: -a2 * newY
                           } ]
                       };
                       Effect_Ref.write(newState)(stateRef)();
@@ -782,18 +771,18 @@ var PS = {};
           var v5 = Effect_Ref["new"](state)();
           return Data_Functor["void"](Effect.functorEffect)(Web_HTML_Window.requestAnimationFrame(update(v2)(dims)(v1)(v5))(v2))();
       };
-      throw new Error("Failed pattern match at Main (line 65, column 3 - line 97, column 72): " + [ v.constructor.name ]);
+      throw new Error("Failed pattern match at Main (line 67, column 3 - line 99, column 72): " + [ v.constructor.name ]);
   };
   exports["consts"] = consts;
   exports["config"] = config;
   exports["main"] = main;
-  exports["initialVelocity"] = initialVelocity;
+  exports["scaleCanvas"] = scaleCanvas;
+  exports["update"] = update;
+  exports["render"] = render;
+  exports["accel"] = accel;
   exports["verletPos"] = verletPos;
   exports["verletVel"] = verletVel;
-  exports["update"] = update;
-  exports["accel"] = accel;
-  exports["render"] = render;
+  exports["initialVelocity"] = initialVelocity;
   exports["translatePos"] = translatePos;
-  exports["scaleCanvas"] = scaleCanvas;
 })(PS);
 PS["Main"].main();

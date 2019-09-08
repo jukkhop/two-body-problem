@@ -17,6 +17,7 @@ infixl 8 pow as **
 
 type Constants = {
   eccentricity :: Number,
+  gravity :: Number,
   massRatio :: Number,
   timeStep :: Number
 }
@@ -47,6 +48,7 @@ type State = {
 consts :: Constants
 consts = {
   eccentricity: 0.7,
+  gravity: 10.0,
   massRatio: 1.0,
   timeStep: 0.005
 }
@@ -96,17 +98,14 @@ main = do
       stateRef <- new state
       void $ requestAnimationFrame (update wind dims ctx stateRef) wind
 
-initialVelocity :: Number -> Number -> Number
-initialVelocity ratio ecc =
-  sqrt (1.0 + ratio) * (1.0 + ecc)
-
-verletPos :: Number -> Number -> Number -> Number -> Number
-verletPos pos vel dt currAccel =
-  pos + vel * dt + 0.5 * currAccel * dt ** 2.0
-
-verletVel :: Number -> Number -> Number -> Number -> Number
-verletVel vel dt currAccel nextAccel =
-  vel + 0.5 * (nextAccel + currAccel) * dt
+scaleCanvas :: Window -> CanvasElement -> Context2D -> Effect Unit
+scaleCanvas wind canv ctx = do
+  width <- innerWidth wind
+  height <- innerHeight wind
+  let { pixelRatio: ratio } = config
+  setCanvasWidth canv (ratio * (toNumber width))
+  setCanvasHeight canv (ratio * (toNumber height))
+  scale ctx { scaleX: ratio, scaleY: ratio }
 
 update :: Window -> Dimensions -> Context2D -> Ref State -> Effect Unit
 update wind dims ctx stateRef = do
@@ -132,8 +131,8 @@ update wind dims ctx stateRef = do
       vy: newVy,
       masses,
       positions: [
-        { x: -a2 * newX, y: -a2 * newY },
-        { x: a1 * newX, y: a1 * newY }
+        { x: a1 * newX, y: a1 * newY },
+        { x: -a2 * newX, y: -a2 * newY }
       ]
     }
 
@@ -141,20 +140,12 @@ update wind dims ctx stateRef = do
   render dims ctx stateRef
   void $ requestAnimationFrame (update wind dims ctx stateRef) wind
 
-accel :: Number -> Number -> Number -> Vector
-accel radius unitX unitY = do
-  let
-    scalar = -(10.0 + consts.massRatio) / radius ** 2.0
-    accelX = scalar * unitX
-    accelY = scalar * unitY
-
-  { x: accelX, y: accelY }
-
 render :: Dimensions -> Context2D -> Ref State -> Effect Unit
-render { width, height } ctx stateRef = do
+render dims ctx stateRef = do
   { x, y, masses, positions } <- read stateRef
 
   let
+    { width, height } = dims
     { m1, m2, ratio, total } = masses
     { bodyColor: color, bodyRadius: radius } = config
     start = 0.0
@@ -162,8 +153,8 @@ render { width, height } ctx stateRef = do
     def = { x: 0.0, y: 0.0 }
     pos1 = fromMaybe def (positions !! 0)
     pos2 = fromMaybe def (positions !! 1)
-    tpos1 = translatePos { width, height } { x: pos1.x, y: pos1.y }
-    tpos2 = translatePos { width, height } { x: pos2.x, y: pos2.y }
+    tpos1 = translatePos dims pos1
+    tpos2 = translatePos dims pos2
 
   clearRect ctx { width, height, x: 0.0, y: 0.0 }
   beginPath ctx
@@ -177,6 +168,27 @@ render { width, height } ctx stateRef = do
   setFillStyle ctx color
   fill ctx
 
+accel :: Number -> Number -> Number -> Vector
+accel radius unitX unitY = do
+  let
+    scalar = -(consts.gravity * consts.massRatio) / radius ** 2.0
+    accelX = scalar * unitX
+    accelY = scalar * unitY
+
+  { x: accelX, y: accelY }
+
+verletPos :: Number -> Number -> Number -> Number -> Number
+verletPos pos vel dt currAccel =
+  pos + vel * dt + 0.5 * currAccel * dt ** 2.0
+
+verletVel :: Number -> Number -> Number -> Number -> Number
+verletVel vel dt currAccel nextAccel =
+  vel + 0.5 * (nextAccel + currAccel) * dt
+
+initialVelocity :: Number -> Number -> Number
+initialVelocity ratio ecc =
+  sqrt (1.0 + ratio) * (1.0 + ecc)
+
 translatePos :: Dimensions -> Vector -> Vector
 translatePos { width, height } { x, y } = do
   let
@@ -188,11 +200,3 @@ translatePos { width, height } { x, y } = do
 
   { x: centerX, y: centerY }
 
-scaleCanvas :: Window -> CanvasElement -> Context2D -> Effect Unit
-scaleCanvas wind canv ctx = do
-  width <- innerWidth wind
-  height <- innerHeight wind
-  let { pixelRatio: ratio } = config
-  setCanvasWidth canv (ratio * (toNumber width))
-  setCanvasHeight canv (ratio * (toNumber height))
-  scale ctx { scaleX: ratio, scaleY: ratio }

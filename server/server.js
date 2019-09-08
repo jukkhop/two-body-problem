@@ -7,7 +7,6 @@ const PORT = process.env.PORT || '8080';
 
 async function runServer() {
   app.use(express.static(path.join(ROOT_FOLDER, '/public')));
-  app.use(express.static(path.join(ROOT_FOLDER, '/output')));
 
   app.get('/', (req, res) => {
     res.sendFile(path.join(ROOT_FOLDER, 'index.html'));
