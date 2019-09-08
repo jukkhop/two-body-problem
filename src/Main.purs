@@ -13,6 +13,8 @@ import Math (floor, pi, pow, sqrt)
 import Web.HTML (Window, window)
 import Web.HTML.Window (innerHeight, innerWidth, requestAnimationFrame)
 
+infixl 8 pow as **
+
 type Constants = {
   eccentricity :: Number,
   massRatio :: Number,
@@ -100,7 +102,7 @@ initialVelocity ratio ecc =
 
 verletPos :: Number -> Number -> Number -> Number -> Number
 verletPos pos vel dt currAccel =
-  pos + vel * dt + 0.5 * currAccel * dt `pow` 2.0
+  pos + vel * dt + 0.5 * currAccel * dt ** 2.0
 
 verletVel :: Number -> Number -> Number -> Number -> Number
 verletVel vel dt currAccel nextAccel =
@@ -111,11 +113,11 @@ update wind dims ctx stateRef = do
   { x, y, vx, vy, masses, positions } <- read stateRef
   let
     dt = consts.timeStep
-    radius = sqrt (x `pow` 2.0 + y `pow` 2.0)
+    radius = sqrt (x ** 2.0 + y ** 2.0)
     currAccel = accel radius (x / radius) (y / radius)
     newX = verletPos x vx dt currAccel.x
     newY = verletPos y vy dt currAccel.y
-    newRadius = sqrt (newX `pow` 2.0 + newY `pow` 2.0)
+    newRadius = sqrt (newX ** 2.0 + newY ** 2.0)
     newAccel = accel newRadius (newX / newRadius) (newY / newRadius)
     newVx = verletVel vx dt currAccel.x newAccel.x
     newVy = verletVel vy dt currAccel.y newAccel.y
@@ -142,7 +144,7 @@ update wind dims ctx stateRef = do
 accel :: Number -> Number -> Number -> Vector
 accel radius unitX unitY = do
   let
-    scalar = -(10.0 + consts.massRatio) / radius `pow` 2.0
+    scalar = -(10.0 + consts.massRatio) / radius ** 2.0
     accelX = scalar * unitX
     accelY = scalar * unitY
 

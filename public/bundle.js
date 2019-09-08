@@ -782,7 +782,7 @@ var PS = {};
           var v5 = Effect_Ref["new"](state)();
           return Data_Functor["void"](Effect.functorEffect)(Web_HTML_Window.requestAnimationFrame(update(v2)(dims)(v1)(v5))(v2))();
       };
-      throw new Error("Failed pattern match at Main (line 63, column 3 - line 95, column 72): " + [ v.constructor.name ]);
+      throw new Error("Failed pattern match at Main (line 65, column 3 - line 97, column 72): " + [ v.constructor.name ]);
   };
   exports["consts"] = consts;
   exports["config"] = config;
