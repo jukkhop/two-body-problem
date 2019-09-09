@@ -28,6 +28,8 @@ type Config = {
   scale :: Number
 }
 
+type Vector = { x :: Number, y :: Number }
+
 type Masses = {
   m1 :: Number,
   m2 :: Number,
@@ -35,13 +37,9 @@ type Masses = {
   total :: Number
 }
 
-type Vector = { x :: Number, y :: Number }
-
 type State = {
-  x :: Number,
-  y :: Number,
-  vx :: Number,
-  vy :: Number,
+  pos :: Vector,
+  vel :: Vector,
   masses :: Masses,
   positions :: Array Vector
 }
@@ -73,14 +71,11 @@ main = do
       width <- innerWidth wind
       height <- innerHeight wind
       scaleCanvas wind canv ctx
-      
       let
         { eccentricity: e, massRatio } = consts
         state = {
-          x: 1.0,
-          y: 0.0,
-          vx: 0.0,
-          vy: initialVelocity 1.0 e,
+          pos: { x: 1.0, y: 0.0 },
+          vel: { x: 0.0, y: initialVelocity 1.0 e },
           masses: {
             m1: 1.0,
             m2: massRatio,
@@ -92,7 +87,6 @@ main = do
             { x: 0.0, y: 0.0 }
           ]
         }
-
         dims = { width: toNumber width, height: toNumber height }
 
       stateRef <- new state
@@ -109,33 +103,30 @@ scaleCanvas wind canv ctx = do
 
 update :: Window -> Dimensions -> Context2D -> Ref State -> Effect Unit
 update wind dims ctx stateRef = do
-  { x, y, vx, vy, masses, positions } <- read stateRef
-
+  { pos, vel, masses, positions } <- read stateRef
   let
     dt = consts.timeStep
-    radius = sqrt (x ** 2.0 + y ** 2.0)
-    unitVect = { x: x / radius, y: y / radius }
+
+    radius = hypotenuse pos
+    unitVect = { x: pos.x / radius, y: pos.y / radius }
     currAccel = accel masses radius unitVect
-    newX = verletPos x vx dt currAccel.x
-    newY = verletPos y vy dt currAccel.y
-    newRadius = sqrt (newX ** 2.0 + newY ** 2.0)
-    newUnitVect = { x: newX / newRadius, y: newY / newRadius }
+    newPos = verletPos pos vel currAccel dt
+
+    newRadius = hypotenuse newPos
+    newUnitVect = { x: newPos.x / newRadius, y: newPos.y / newRadius }
     newAccel = accel masses newRadius newUnitVect
-    newVx = verletVel vx dt currAccel.x newAccel.x
-    newVy = verletVel vy dt currAccel.y newAccel.y
+    newVel = verletVel vel currAccel newAccel dt
 
     a1 = (masses.m1 / masses.total)
     a2 = (masses.m2 / masses.total)
 
     newState = {
-      x: newX,
-      y: newY,
-      vx: newVx,
-      vy: newVy,
+      pos: newPos,
+      vel: newVel,
       masses,
       positions: [
-        { x: a1 * newX, y: a1 * newY },
-        { x: -a2 * newX, y: -a2 * newY }
+        { x: a1 * newPos.x, y: a1 * newPos.y },
+        { x: -a2 * newPos.x, y: -a2 * newPos.y }
       ]
     }
 
@@ -146,7 +137,6 @@ update wind dims ctx stateRef = do
 render :: Dimensions -> Context2D -> Ref State -> Effect Unit
 render dims ctx stateRef = do
   { positions } <- read stateRef
-
   let
     { width, height } = dims
     { bodyColor: color, bodyRadius: radius } = config
@@ -166,6 +156,9 @@ render dims ctx stateRef = do
   setFillStyle ctx color
   fill ctx
 
+hypotenuse :: Vector -> Number
+hypotenuse { x, y } = sqrt (x ** 2.0 + y ** 2.0)
+
 accel :: Masses -> Number -> Vector -> Vector
 accel { m1, m2 } radius { x, y } = do
   let
@@ -175,13 +168,17 @@ accel { m1, m2 } radius { x, y } = do
 
   { x: accelX, y: accelY }
 
-verletPos :: Number -> Number -> Number -> Number -> Number
-verletPos pos vel dt currAccel =
-  pos + vel * dt + 0.5 * currAccel * dt ** 2.0
+verletPos :: Vector -> Vector -> Vector -> Number -> Vector
+verletPos pos vel currAccel dt = {
+  x: pos.x + vel.x * dt + 0.5 * currAccel.x * dt ** 2.0,
+  y: pos.y + vel.y * dt + 0.5 * currAccel.y * dt ** 2.0
+}
 
-verletVel :: Number -> Number -> Number -> Number -> Number
-verletVel vel dt currAccel nextAccel =
-  vel + 0.5 * (nextAccel + currAccel) * dt
+verletVel :: Vector -> Vector -> Vector -> Number -> Vector
+verletVel vel currAccel nextAccel dt = {
+  x: vel.x + 0.5 * (nextAccel.x + currAccel.x) * dt,
+  y: vel.y + 0.5 * (nextAccel.y + currAccel.y) * dt
+}
 
 initialVelocity :: Number -> Number -> Number
 initialVelocity ratio ecc =
