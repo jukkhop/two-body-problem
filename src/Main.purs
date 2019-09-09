@@ -87,6 +87,34 @@ scaleCanvas wind canv ctx = do
   setCanvasHeight canv (ratio * (toNumber height))
   scale ctx { scaleX: ratio, scaleY: ratio }
 
+simulate :: Window -> Dimensions -> Context2D -> State -> Effect Unit
+simulate wind dims ctx state = do
+  let newState = updateState state
+  render dims ctx newState
+  void $ requestAnimationFrame (simulate wind dims ctx newState) wind
+
+render :: Dimensions -> Context2D -> State -> Effect Unit
+render dims ctx state = do
+  let
+    { width, height } = dims
+    { positions } = state
+    { bodyColor: color, bodyRadius: radius } = config
+    start = 0.0
+    end = 2.0 * pi
+
+  clearRect ctx { width, height, x: 0.0, y: 0.0 }
+  beginPath ctx
+
+  foreachE positions
+    (\pos -> do
+      let tpos = translatePos dims pos
+      moveTo ctx (tpos.x + radius) tpos.y
+      arc ctx { x: tpos.x, y: tpos.y, radius, start, end }
+    )
+
+  setFillStyle ctx color
+  fill ctx
+
 initialState :: Number -> Number -> State
 initialState massRatio eccentricity =
   {
@@ -132,34 +160,6 @@ updateState state = do
       { x: -a2 * newPos.x, y: -a2 * newPos.y }
     ]
   }
-
-simulate :: Window -> Dimensions -> Context2D -> State -> Effect Unit
-simulate wind dims ctx state = do
-  let newState = updateState state
-  render dims ctx newState
-  void $ requestAnimationFrame (simulate wind dims ctx newState) wind
-
-render :: Dimensions -> Context2D -> State -> Effect Unit
-render dims ctx state = do
-  let
-    { width, height } = dims
-    { positions } = state
-    { bodyColor: color, bodyRadius: radius } = config
-    start = 0.0
-    end = 2.0 * pi
-
-  clearRect ctx { width, height, x: 0.0, y: 0.0 }
-  beginPath ctx
-
-  foreachE positions
-    (\pos -> do
-      let tpos = translatePos dims pos
-      moveTo ctx (tpos.x + radius) tpos.y
-      arc ctx { x: tpos.x, y: tpos.y, radius, start, end }
-    )
-
-  setFillStyle ctx color
-  fill ctx
 
 accel :: Masses -> Number -> Vector -> Vector
 accel { m1, m2 } radius { x, y } = do
