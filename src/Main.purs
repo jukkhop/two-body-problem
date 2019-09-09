@@ -6,7 +6,6 @@ import Data.Int (toNumber)
 import Data.Maybe (Maybe(Just, Nothing))
 import Effect (Effect, foreachE)
 import Effect.Console (log)
-import Effect.Ref (Ref, new, read, write)
 import Graphics.Canvas (CanvasElement, Context2D, Dimensions, arc, beginPath, clearRect, fill, getCanvasElementById, getContext2D, moveTo, scale, setCanvasHeight, setCanvasWidth, setFillStyle)
 import Math (floor, pi, pow, sqrt)
 import Web.HTML (Window, window)
@@ -47,7 +46,7 @@ type State = {
 consts :: Constants
 consts = {
   eccentricity: 0.7,
-  gravity: 10.0,
+  gravity: 12.5,
   massRatio: 1.0,
   timeStep: 0.005
 }
@@ -55,9 +54,9 @@ consts = {
 config :: Config
 config = {
   bodyColor: "#ffffff",
-  bodyRadius: 7.0,
+  bodyRadius: 8.0,
   pixelRatio: 2.0,
-  scale: 350.0
+  scale: 300.0
 }
 
 main :: Effect Unit
@@ -71,26 +70,13 @@ main = do
       width <- innerWidth wind
       height <- innerHeight wind
       scaleCanvas wind canv ctx
+      
       let
-        { eccentricity: e, massRatio } = consts
-        state = {
-          pos: { x: 1.0, y: 0.0 },
-          vel: { x: 0.0, y: initialVelocity 1.0 e },
-          masses: {
-            m1: 1.0,
-            m2: massRatio,
-            ratio: massRatio,
-            total: 1.0 + massRatio
-          },
-          positions: [
-            { x: 0.0, y: 0.0 },
-            { x: 0.0, y: 0.0 }
-          ]
-        }
+        { eccentricity, massRatio } = consts
+        state = initialState massRatio eccentricity
         dims = { width: toNumber width, height: toNumber height }
 
-      stateRef <- new state
-      void $ requestAnimationFrame (update wind dims ctx stateRef) wind
+      void $ requestAnimationFrame (simulate wind dims ctx state) wind
 
 scaleCanvas :: Window -> CanvasElement -> Context2D -> Effect Unit
 scaleCanvas wind canv ctx = do
@@ -101,10 +87,27 @@ scaleCanvas wind canv ctx = do
   setCanvasHeight canv (ratio * (toNumber height))
   scale ctx { scaleX: ratio, scaleY: ratio }
 
-update :: Window -> Dimensions -> Context2D -> Ref State -> Effect Unit
-update wind dims ctx stateRef = do
-  { pos, vel, masses, positions } <- read stateRef
+initialState :: Number -> Number -> State
+initialState massRatio eccentricity =
+  {
+    pos: { x: 1.0, y: 0.0 },
+    vel: { x: 0.0, y: initialVelocity 1.0 eccentricity },
+    masses: {
+      m1: 1.0,
+      m2: massRatio,
+      ratio: massRatio,
+      total: 1.0 + massRatio
+    },
+    positions: [
+      { x: 0.0, y: 0.0 },
+      { x: 0.0, y: 0.0 }
+    ]
+  }
+
+updateState :: State -> State
+updateState state = do
   let
+    { pos, vel, masses, positions } = state
     dt = consts.timeStep
 
     radius = hypotenuse pos
@@ -117,28 +120,30 @@ update wind dims ctx stateRef = do
     newAccel = accel masses newRadius newUnitVect
     newVel = verletVel vel currAccel newAccel dt
 
-    a1 = (masses.m1 / masses.total)
-    a2 = (masses.m2 / masses.total)
+    a1 = masses.m1 / masses.total
+    a2 = masses.m2 / masses.total
 
-    newState = {
-      pos: newPos,
-      vel: newVel,
-      masses,
-      positions: [
-        { x: a1 * newPos.x, y: a1 * newPos.y },
-        { x: -a2 * newPos.x, y: -a2 * newPos.y }
-      ]
-    }
+  {
+    pos: newPos,
+    vel: newVel,
+    masses,
+    positions: [
+      { x: a1 * newPos.x, y: a1 * newPos.y },
+      { x: -a2 * newPos.x, y: -a2 * newPos.y }
+    ]
+  }
 
-  write newState stateRef
-  render dims ctx stateRef
-  void $ requestAnimationFrame (update wind dims ctx stateRef) wind
+simulate :: Window -> Dimensions -> Context2D -> State -> Effect Unit
+simulate wind dims ctx state = do
+  let newState = updateState state
+  render dims ctx newState
+  void $ requestAnimationFrame (simulate wind dims ctx newState) wind
 
-render :: Dimensions -> Context2D -> Ref State -> Effect Unit
-render dims ctx stateRef = do
-  { positions } <- read stateRef
+render :: Dimensions -> Context2D -> State -> Effect Unit
+render dims ctx state = do
   let
     { width, height } = dims
+    { positions } = state
     { bodyColor: color, bodyRadius: radius } = config
     start = 0.0
     end = 2.0 * pi
@@ -155,9 +160,6 @@ render dims ctx stateRef = do
 
   setFillStyle ctx color
   fill ctx
-
-hypotenuse :: Vector -> Number
-hypotenuse { x, y } = sqrt (x ** 2.0 + y ** 2.0)
 
 accel :: Masses -> Number -> Vector -> Vector
 accel { m1, m2 } radius { x, y } = do
@@ -180,6 +182,9 @@ verletVel vel currAccel nextAccel dt = {
   y: vel.y + 0.5 * (nextAccel.y + currAccel.y) * dt
 }
 
+hypotenuse :: Vector -> Number
+hypotenuse { x, y } = sqrt (x ** 2.0 + y ** 2.0)
+
 initialVelocity :: Number -> Number -> Number
 initialVelocity ratio ecc =
   sqrt (1.0 + ratio) * (1.0 + ecc)
@@ -194,4 +199,3 @@ translatePos { width, height } { x, y } = do
     centerY = y * scale + middleY
 
   { x: centerX, y: centerY }
-
