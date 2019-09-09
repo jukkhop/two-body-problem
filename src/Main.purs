@@ -2,10 +2,9 @@ module Main where
 
 import Prelude
 
-import Data.Array ((!!))
 import Data.Int (toNumber)
-import Data.Maybe (Maybe(Just, Nothing), fromMaybe)
-import Effect (Effect)
+import Data.Maybe (Maybe(Just, Nothing))
+import Effect (Effect, foreachE)
 import Effect.Console (log)
 import Effect.Ref (Ref, new, read, write)
 import Graphics.Canvas (CanvasElement, Context2D, Dimensions, arc, beginPath, clearRect, fill, getCanvasElementById, getContext2D, moveTo, scale, setCanvasHeight, setCanvasWidth, setFillStyle)
@@ -29,6 +28,13 @@ type Config = {
   scale :: Number
 }
 
+type Masses = {
+  m1 :: Number,
+  m2 :: Number,
+  ratio :: Number,
+  total :: Number
+}
+
 type Vector = { x :: Number, y :: Number }
 
 type State = {
@@ -36,12 +42,7 @@ type State = {
   y :: Number,
   vx :: Number,
   vy :: Number,
-  masses :: {
-    m1 :: Number,
-    m2 :: Number,
-    ratio :: Number,
-    total :: Number
-  },
+  masses :: Masses,
   positions :: Array Vector
 }
 
@@ -71,9 +72,8 @@ main = do
       wind <- window
       width <- innerWidth wind
       height <- innerHeight wind
-
       scaleCanvas wind canv ctx
-
+      
       let
         { eccentricity: e, massRatio } = consts
         state = {
@@ -110,19 +110,22 @@ scaleCanvas wind canv ctx = do
 update :: Window -> Dimensions -> Context2D -> Ref State -> Effect Unit
 update wind dims ctx stateRef = do
   { x, y, vx, vy, masses, positions } <- read stateRef
+
   let
     dt = consts.timeStep
     radius = sqrt (x ** 2.0 + y ** 2.0)
-    currAccel = accel radius (x / radius) (y / radius)
+    unitVect = { x: x / radius, y: y / radius }
+    currAccel = accel masses radius unitVect
     newX = verletPos x vx dt currAccel.x
     newY = verletPos y vy dt currAccel.y
     newRadius = sqrt (newX ** 2.0 + newY ** 2.0)
-    newAccel = accel newRadius (newX / newRadius) (newY / newRadius)
+    newUnitVect = { x: newX / newRadius, y: newY / newRadius }
+    newAccel = accel masses newRadius newUnitVect
     newVx = verletVel vx dt currAccel.x newAccel.x
     newVy = verletVel vy dt currAccel.y newAccel.y
 
-    a1 = (masses.m2 / masses.total)
-    a2 = (masses.m1 / masses.total)
+    a1 = (masses.m1 / masses.total)
+    a2 = (masses.m2 / masses.total)
 
     newState = {
       x: newX,
@@ -142,38 +145,33 @@ update wind dims ctx stateRef = do
 
 render :: Dimensions -> Context2D -> Ref State -> Effect Unit
 render dims ctx stateRef = do
-  { x, y, masses, positions } <- read stateRef
+  { positions } <- read stateRef
 
   let
     { width, height } = dims
-    { m1, m2, ratio, total } = masses
     { bodyColor: color, bodyRadius: radius } = config
     start = 0.0
     end = 2.0 * pi
-    def = { x: 0.0, y: 0.0 }
-    pos1 = fromMaybe def (positions !! 0)
-    pos2 = fromMaybe def (positions !! 1)
-    tpos1 = translatePos dims pos1
-    tpos2 = translatePos dims pos2
 
   clearRect ctx { width, height, x: 0.0, y: 0.0 }
   beginPath ctx
 
-  moveTo ctx (tpos1.x + radius) tpos1.y
-  arc ctx { x: tpos1.x, y: tpos1.y, radius, start, end }
-
-  moveTo ctx (tpos2.x + radius) tpos2.y
-  arc ctx { x: tpos2.x, y: tpos2.y, radius, start, end }
+  foreachE positions
+    (\pos -> do
+      let tpos = translatePos dims pos
+      moveTo ctx (tpos.x + radius) tpos.y
+      arc ctx { x: tpos.x, y: tpos.y, radius, start, end }
+    )
 
   setFillStyle ctx color
   fill ctx
 
-accel :: Number -> Number -> Number -> Vector
-accel radius unitX unitY = do
+accel :: Masses -> Number -> Vector -> Vector
+accel { m1, m2 } radius { x, y } = do
   let
-    scalar = -(consts.gravity * consts.massRatio) / radius ** 2.0
-    accelX = scalar * unitX
-    accelY = scalar * unitY
+    scalar = -(consts.gravity * m1 * m2) / radius ** 2.0
+    accelX = scalar * x
+    accelY = scalar * y
 
   { x: accelX, y: accelY }
 
