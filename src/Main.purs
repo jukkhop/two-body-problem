@@ -3,10 +3,11 @@ module Main where
 import Prelude
 
 import Data.Int (toNumber)
-import Data.Maybe (fromJust)
+import Data.Maybe (Maybe(Just, Nothing))
 import Effect (Effect, foreachE)
 import Graphics.Canvas (CanvasElement, Context2D, Dimensions, arc, beginPath, clearRect, fill, getCanvasElementById, getContext2D, moveTo, scale, setCanvasHeight, setCanvasWidth, setFillStyle)
 import Math (floor, pi, pow, sqrt)
+import Partial (crashWith)
 import Partial.Unsafe (unsafePartial)
 import Web.HTML (Window, window)
 import Web.HTML.Window (innerHeight, innerWidth, requestAnimationFrame)
@@ -62,12 +63,12 @@ config = {
 main :: Effect Unit
 main = do
   maybeCanvas <- getCanvasElementById "canvas"
-  let canv = unsafePartial $ fromJust maybeCanvas
-  ctx <- getContext2D canv
+  canvas <- unsafePartial getCanvas
+  ctx <- getContext2D canvas
   wind <- window
   width <- innerWidth wind
   height <- innerHeight wind
-  scaleCanvas wind canv ctx
+  scaleCanvas wind canvas ctx
 
   let
     { eccentricity, massRatio } = consts
@@ -75,6 +76,13 @@ main = do
     dims = { width: toNumber width, height: toNumber height }
 
   void $ requestAnimationFrame (simulate wind dims ctx state) wind
+
+getCanvas :: Partial => Effect CanvasElement
+getCanvas = do
+  maybeCanvas <- getCanvasElementById "canvas"
+  case maybeCanvas of
+    Nothing -> crashWith "Canvas not found"
+    Just canvas -> pure $ canvas
 
 scaleCanvas :: Window -> CanvasElement -> Context2D -> Effect Unit
 scaleCanvas wind canv ctx = do
