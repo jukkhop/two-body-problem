@@ -3,11 +3,11 @@ module Main where
 import Prelude
 
 import Data.Int (toNumber)
-import Data.Maybe (Maybe(Just, Nothing))
+import Data.Maybe (fromJust)
 import Effect (Effect, foreachE)
-import Effect.Console (log)
 import Graphics.Canvas (CanvasElement, Context2D, Dimensions, arc, beginPath, clearRect, fill, getCanvasElementById, getContext2D, moveTo, scale, setCanvasHeight, setCanvasWidth, setFillStyle)
 import Math (floor, pi, pow, sqrt)
+import Partial.Unsafe (unsafePartial)
 import Web.HTML (Window, window)
 import Web.HTML.Window (innerHeight, innerWidth, requestAnimationFrame)
 
@@ -62,21 +62,19 @@ config = {
 main :: Effect Unit
 main = do
   maybeCanvas <- getCanvasElementById "canvas"
-  case maybeCanvas of
-    Nothing -> log "Canvas not found"
-    Just canv -> do
-      ctx <- getContext2D canv
-      wind <- window
-      width <- innerWidth wind
-      height <- innerHeight wind
-      scaleCanvas wind canv ctx
-      
-      let
-        { eccentricity, massRatio } = consts
-        state = initialState massRatio eccentricity
-        dims = { width: toNumber width, height: toNumber height }
+  let canv = unsafePartial $ fromJust maybeCanvas
+  ctx <- getContext2D canv
+  wind <- window
+  width <- innerWidth wind
+  height <- innerHeight wind
+  scaleCanvas wind canv ctx
 
-      void $ requestAnimationFrame (simulate wind dims ctx state) wind
+  let
+    { eccentricity, massRatio } = consts
+    state = initialState massRatio eccentricity
+    dims = { width: toNumber width, height: toNumber height }
+
+  void $ requestAnimationFrame (simulate wind dims ctx state) wind
 
 scaleCanvas :: Window -> CanvasElement -> Context2D -> Effect Unit
 scaleCanvas wind canv ctx = do
@@ -133,9 +131,9 @@ initialState massRatio eccentricity =
   }
 
 updateState :: State -> State
-updateState state = do
+updateState state =
   let
-    { pos, vel, masses, positions } = state
+    { pos, vel, masses } = state
     dt = consts.timeStep
 
     radius = hypotenuse pos
@@ -150,25 +148,25 @@ updateState state = do
 
     a1 = masses.m1 / masses.total
     a2 = masses.m2 / masses.total
-
-  {
-    pos: newPos,
-    vel: newVel,
-    masses,
-    positions: [
-      { x: a1 * newPos.x, y: a1 * newPos.y },
-      { x: -a2 * newPos.x, y: -a2 * newPos.y }
-    ]
-  }
+  in
+    {
+      pos: newPos,
+      vel: newVel,
+      masses,
+      positions: [
+        { x: a1 * newPos.x, y: a1 * newPos.y },
+        { x: -a2 * newPos.x, y: -a2 * newPos.y }
+      ]
+    }
 
 accel :: Masses -> Number -> Vector -> Vector
-accel { m1, m2 } radius { x, y } = do
+accel { m1, m2 } radius unitVect =
   let
     scalar = -(consts.gravity * m1 * m2) / radius ** 2.0
-    accelX = scalar * x
-    accelY = scalar * y
-
-  { x: accelX, y: accelY }
+    accelX = scalar * unitVect.x
+    accelY = scalar * unitVect.y
+  in
+    { x: accelX, y: accelY }
 
 verletPos :: Vector -> Vector -> Vector -> Number -> Vector
 verletPos pos vel currAccel dt = {
@@ -190,12 +188,12 @@ initialVelocity ratio ecc =
   sqrt (1.0 + ratio) * (1.0 + ecc)
 
 translatePos :: Dimensions -> Vector -> Vector
-translatePos { width, height } { x, y } = do
+translatePos { width, height } { x, y } =
   let
     { scale } = config
     middleX = floor (width / 2.0)
     middleY = floor (height / 2.0)
     centerX = x * scale + middleX
     centerY = y * scale + middleY
-
-  { x: centerX, y: centerY }
+  in
+    { x: centerX, y: centerY }
