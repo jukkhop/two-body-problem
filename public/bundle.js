@@ -523,7 +523,7 @@ var PS = {};
           if (v instanceof Data_Maybe.Just) {
               return v.value0;
           };
-          throw new Error("Failed pattern match at Main (line 83, column 3 - line 85, column 33): " + [ v.constructor.name ]);
+          throw new Error("Failed pattern match at Main (line 82, column 3 - line 84, column 31): " + [ v.constructor.name ]);
       };
   };
   var consts = {
@@ -611,40 +611,42 @@ var PS = {};
       };
   };
   var updateState = function (state) {
-      var radius = hypotenuse(state.pos);
-      var unitVect = {
-          x: state.pos.x / radius,
-          y: state.pos.y / radius
-      };
-      var currAccel = accel(state.masses)(radius)(unitVect);
-      var newPos = verletPos(state.pos)(state.vel)(currAccel)(consts.timeStep);
-      var newRadius = hypotenuse(newPos);
-      var newUnitVect = {
-          x: newPos.x / newRadius,
-          y: newPos.y / newRadius
-      };
-      var newAccel = accel(state.masses)(newRadius)(newUnitVect);
-      var newVel = verletVel(state.vel)(currAccel)(newAccel)(consts.timeStep);
-      var a2 = state.masses.m2 / state.masses.total;
-      var a1 = state.masses.m1 / state.masses.total;
-      return {
-          pos: newPos,
-          vel: newVel,
-          masses: state.masses,
-          positions: [ {
-              x: a1 * newPos.x,
-              y: a1 * newPos.y
-          }, {
-              x: -a2 * newPos.x,
-              y: -a2 * newPos.y
-          } ]
+      return function (deltaTime) {
+          var radius = hypotenuse(state.pos);
+          var unitVect = {
+              x: state.pos.x / radius,
+              y: state.pos.y / radius
+          };
+          var currAccel = accel(state.masses)(radius)(unitVect);
+          var newPos = verletPos(state.pos)(state.vel)(currAccel)(deltaTime);
+          var newRadius = hypotenuse(newPos);
+          var newUnitVect = {
+              x: newPos.x / newRadius,
+              y: newPos.y / newRadius
+          };
+          var newAccel = accel(state.masses)(newRadius)(newUnitVect);
+          var newVel = verletVel(state.vel)(currAccel)(newAccel)(deltaTime);
+          var a2 = state.masses.m2 / state.masses.total;
+          var a1 = state.masses.m1 / state.masses.total;
+          return {
+              pos: newPos,
+              vel: newVel,
+              masses: state.masses,
+              positions: [ {
+                  x: a1 * newPos.x,
+                  y: a1 * newPos.y
+              }, {
+                  x: -a2 * newPos.x,
+                  y: -a2 * newPos.y
+              } ]
+          };
       };
   };
   var simulate = function (wind) {
       return function (dims) {
           return function (ctx) {
               return function (state) {
-                  var newState = updateState(state);
+                  var newState = updateState(state)(consts.timeStep);
                   return function __do() {
                       render(dims)(ctx)(newState)();
                       return Data_Functor["void"](Effect.functorEffect)(Web_HTML_Window.requestAnimationFrame(simulate(wind)(dims)(ctx)(newState))(wind))();
@@ -654,19 +656,18 @@ var PS = {};
       };
   };
   var main = function __do() {
-      var v = Graphics_Canvas.getCanvasElementById("canvas")();
-      var v1 = getCanvas()();
-      var v2 = Graphics_Canvas.getContext2D(v1)();
-      var v3 = Web_HTML.window();
-      var v4 = Web_HTML_Window.innerWidth(v3)();
-      var v5 = Web_HTML_Window.innerHeight(v3)();
-      scaleCanvas(v3)(v1)(v2)();
+      var v = getCanvas()();
+      var v1 = Graphics_Canvas.getContext2D(v)();
+      var v2 = Web_HTML.window();
+      var v3 = Web_HTML_Window.innerWidth(v2)();
+      var v4 = Web_HTML_Window.innerHeight(v2)();
+      scaleCanvas(v2)(v)(v1)();
       var state = initialState(consts.massRatio)(consts.eccentricity);
       var dims = {
-          width: Data_Int.toNumber(v4),
-          height: Data_Int.toNumber(v5)
+          width: Data_Int.toNumber(v3),
+          height: Data_Int.toNumber(v4)
       };
-      return Data_Functor["void"](Effect.functorEffect)(Web_HTML_Window.requestAnimationFrame(simulate(v3)(dims)(v2)(state))(v3))();
+      return Data_Functor["void"](Effect.functorEffect)(Web_HTML_Window.requestAnimationFrame(simulate(v2)(dims)(v1)(state))(v2))();
   };
   exports["consts"] = consts;
   exports["config"] = config;

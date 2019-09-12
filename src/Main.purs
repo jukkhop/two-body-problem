@@ -62,7 +62,6 @@ config = {
 
 main :: Effect Unit
 main = do
-  maybeCanvas <- getCanvasElementById "canvas"
   canvas <- unsafePartial getCanvas
   ctx <- getContext2D canvas
   wind <- window
@@ -82,7 +81,7 @@ getCanvas = do
   maybeCanvas <- getCanvasElementById "canvas"
   case maybeCanvas of
     Nothing -> crashWith "Canvas not found"
-    Just canvas -> pure $ canvas
+    Just canvas -> pure canvas
 
 scaleCanvas :: Window -> CanvasElement -> Context2D -> Effect Unit
 scaleCanvas wind canv ctx = do
@@ -95,7 +94,7 @@ scaleCanvas wind canv ctx = do
 
 simulate :: Window -> Dimensions -> Context2D -> State -> Effect Unit
 simulate wind dims ctx state = do
-  let newState = updateState state
+  let newState = updateState state consts.timeStep
   render dims ctx newState
   void $ requestAnimationFrame (simulate wind dims ctx newState) wind
 
@@ -138,21 +137,19 @@ initialState massRatio eccentricity =
     ]
   }
 
-updateState :: State -> State
-updateState state =
+updateState :: State -> Number -> State
+updateState state deltaTime =
   let
     { pos, vel, masses } = state
-    dt = consts.timeStep
-
     radius = hypotenuse pos
     unitVect = { x: pos.x / radius, y: pos.y / radius }
     currAccel = accel masses radius unitVect
-    newPos = verletPos pos vel currAccel dt
+    newPos = verletPos pos vel currAccel deltaTime
 
     newRadius = hypotenuse newPos
     newUnitVect = { x: newPos.x / newRadius, y: newPos.y / newRadius }
     newAccel = accel masses newRadius newUnitVect
-    newVel = verletVel vel currAccel newAccel dt
+    newVel = verletVel vel currAccel newAccel deltaTime
 
     a1 = masses.m1 / masses.total
     a2 = masses.m2 / masses.total
