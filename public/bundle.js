@@ -94,6 +94,20 @@ var PS = {};
 (function(exports) {
   "use strict";
 
+  exports.arrayMap = function (f) {
+    return function (arr) {
+      var l = arr.length;
+      var result = new Array(l);
+      for (var i = 0; i < l; i++) {
+        result[i] = f(arr[i]);
+      }
+      return result;
+    };
+  };
+})(PS["Data.Functor"] = PS["Data.Functor"] || {});
+(function(exports) {
+  "use strict";
+
   exports.unit = {};
 })(PS["Data.Unit"] = PS["Data.Unit"] || {});
 (function($PS) {
@@ -109,6 +123,7 @@ var PS = {};
   "use strict";
   $PS["Data.Functor"] = $PS["Data.Functor"] || {};
   var exports = $PS["Data.Functor"];
+  var $foreign = $PS["Data.Functor"];
   var Data_Function = $PS["Data.Function"];
   var Data_Unit = $PS["Data.Unit"];                
   var Functor = function (map) {
@@ -117,12 +132,22 @@ var PS = {};
   var map = function (dict) {
       return dict.map;
   };
+  var mapFlipped = function (dictFunctor) {
+      return function (fa) {
+          return function (f) {
+              return map(dictFunctor)(f)(fa);
+          };
+      };
+  };
   var $$void = function (dictFunctor) {
       return map(dictFunctor)(Data_Function["const"](Data_Unit.unit));
-  };
+  };                                                                                             
+  var functorArray = new Functor($foreign.arrayMap);
   exports["Functor"] = Functor;
   exports["map"] = map;
+  exports["mapFlipped"] = mapFlipped;
   exports["void"] = $$void;
+  exports["functorArray"] = functorArray;
 })(PS);
 (function(exports) {
   "use strict";
@@ -578,13 +603,12 @@ var PS = {};
                       y: 0.0
                   })();
                   Graphics_Canvas.beginPath(ctx)();
-                  Effect.foreachE(state.positions)(function (pos) {
-                      var tpos = translatePos(dims)(pos);
+                  Effect.foreachE(Data_Functor.mapFlipped(Data_Functor.functorArray)(state.positions)(translatePos(dims)))(function (v) {
                       return function __do() {
-                          Graphics_Canvas.moveTo(ctx)(tpos.x + config.bodyRadius)(tpos.y)();
+                          Graphics_Canvas.moveTo(ctx)(v.x + config.bodyRadius)(v.y)();
                           return Graphics_Canvas.arc(ctx)({
-                              x: tpos.x,
-                              y: tpos.y,
+                              x: v.x,
+                              y: v.y,
                               radius: config.bodyRadius,
                               start: 0.0,
                               end: end

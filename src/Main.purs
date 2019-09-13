@@ -110,11 +110,10 @@ render dims ctx state = do
   clearRect ctx { width, height, x: 0.0, y: 0.0 }
   beginPath ctx
 
-  foreachE positions
-    (\pos -> do
-      let tpos = translatePos dims pos
-      moveTo ctx (tpos.x + radius) tpos.y
-      arc ctx { x: tpos.x, y: tpos.y, radius, start, end }
+  foreachE (positions <#> translatePos dims)
+    (\{ x, y } -> do
+      moveTo ctx (x + radius) y
+      arc ctx { x, y, radius, start, end }
     )
 
   setFillStyle ctx color
