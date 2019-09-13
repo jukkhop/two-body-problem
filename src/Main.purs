@@ -111,10 +111,9 @@ render dims ctx state = do
   beginPath ctx
 
   foreachE (positions <#> translatePos dims)
-    (\{ x, y } -> do
+    \{ x, y } -> do
       moveTo ctx (x + radius) y
       arc ctx { x, y, radius, start, end }
-    )
 
   setFillStyle ctx color
   fill ctx
@@ -150,8 +149,8 @@ updateState state deltaTime =
     newAccel = accel masses newRadius newUnitVect
     newVel = verletVel vel currAccel newAccel deltaTime
 
-    a1 = masses.m1 / masses.total
-    a2 = masses.m2 / masses.total
+    a1 = masses.m2 / masses.total
+    a2 = masses.m1 / masses.total
   in
     {
       pos: newPos,
