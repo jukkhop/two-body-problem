@@ -139,13 +139,14 @@ updateState :: State -> Number -> State
 updateState state deltaTime =
   let
     { pos, vel, masses } = state
+
     radius = hypotenuse pos
-    unitVect = { x: pos.x / radius, y: pos.y / radius }
+    unitVect = { x: -pos.x / radius, y: -pos.y / radius }
     currAccel = accel masses radius unitVect
     newPos = verletPos pos vel currAccel deltaTime
 
     newRadius = hypotenuse newPos
-    newUnitVect = { x: newPos.x / newRadius, y: newPos.y / newRadius }
+    newUnitVect = { x: -newPos.x / newRadius, y: -newPos.y / newRadius }
     newAccel = accel masses newRadius newUnitVect
     newVel = verletVel vel currAccel newAccel deltaTime
 
@@ -165,7 +166,7 @@ updateState state deltaTime =
 accel :: Masses -> Number -> Vector -> Vector
 accel { m1, m2 } radius unitVect =
   let
-    scalar = -(consts.gravity * m1 * m2) / radius ** 2.0
+    scalar = (consts.gravity * m1 * m2) / radius ** 2.0
     accelX = scalar * unitVect.x
     accelY = scalar * unitVect.y
   in

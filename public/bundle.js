@@ -423,16 +423,16 @@ var PS = {};
   exports["window"] = $foreign.window;
 })(PS);
 (function(exports) {
-  "use strict";
+  'use strict';
 
-  exports.innerWidth = function (window) {
-    return function () {
+  exports.innerWidth = function(window) {
+    return function() {
       return window.innerWidth;
     };
   };
 
-  exports.innerHeight = function (window) {
-    return function () {
+  exports.innerHeight = function(window) {
+    return function() {
       return window.innerHeight;
     };
   };
@@ -624,7 +624,7 @@ var PS = {};
   var accel = function (v) {
       return function (radius) {
           return function (unitVect) {
-              var scalar = -(consts.gravity * v.m1 * v.m2) / $$Math.pow(radius)(2.0);
+              var scalar = (consts.gravity * v.m1 * v.m2) / $$Math.pow(radius)(2.0);
               var accelY = scalar * unitVect.y;
               var accelX = scalar * unitVect.x;
               return {
@@ -638,20 +638,20 @@ var PS = {};
       return function (deltaTime) {
           var radius = hypotenuse(state.pos);
           var unitVect = {
-              x: state.pos.x / radius,
-              y: state.pos.y / radius
+              x: -state.pos.x / radius,
+              y: -state.pos.y / radius
           };
           var currAccel = accel(state.masses)(radius)(unitVect);
           var newPos = verletPos(state.pos)(state.vel)(currAccel)(deltaTime);
           var newRadius = hypotenuse(newPos);
           var newUnitVect = {
-              x: newPos.x / newRadius,
-              y: newPos.y / newRadius
+              x: -newPos.x / newRadius,
+              y: -newPos.y / newRadius
           };
           var newAccel = accel(state.masses)(newRadius)(newUnitVect);
           var newVel = verletVel(state.vel)(currAccel)(newAccel)(deltaTime);
-          var a2 = state.masses.m2 / state.masses.total;
-          var a1 = state.masses.m1 / state.masses.total;
+          var a2 = state.masses.m1 / state.masses.total;
+          var a1 = state.masses.m2 / state.masses.total;
           return {
               pos: newPos,
               vel: newVel,
