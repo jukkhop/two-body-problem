@@ -8,7 +8,7 @@
   "version": "1.0.0",
   "scripts": {
     "browserify": "pulp browserify",
-    "bundle": "pulp build -O --to ./public/bundle.js",
+    "bundle": "pulp --watch build -O --to ./public/bundle.js",
     "build": "pulp build",
     "run": "pulp run",
     "serve": "node ./server/server.js"
