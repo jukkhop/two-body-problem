@@ -4,18 +4,19 @@ import Prelude
 
 import Effect (Effect)
 import Effect.Aff (launchAff_)
-import Main (State, consts, hypotenuse, initialState, updateState)
+import Main (consts)
 import Math (abs)
 import Test.Spec (describe, it)
 import Test.Spec.Assertions (shouldSatisfy)
 import Test.Spec.Reporter.Console (consoleReporter)
 import Test.Spec.Runner (runSpec)
+import Types (State)
+import World (hypotenuse, initialState, updateState)
 
 main :: Effect Unit
 main = launchAff_ $ runSpec [consoleReporter] do
   let
-    { eccentricity, massRatio, timeStep } = consts
-    { masses, positions } = initialState massRatio eccentricity
+    { masses, positions } = initialState consts
 
     initialPos = { x: 1.0, y: 1.0 }
     initialRadius = hypotenuse initialPos
@@ -32,7 +33,7 @@ main = launchAff_ $ runSpec [consoleReporter] do
           masses,
           positions
         }
-        updated = updateState initial timeStep
+        updated = updateState consts initial
       updated `shouldSatisfy` \{ pos } -> hypotenuse pos < initialRadius
 
     it "should pull bodies farther apart when velocity is positive" do
@@ -44,7 +45,7 @@ main = launchAff_ $ runSpec [consoleReporter] do
           masses,
           positions
         }
-        updated = updateState initial timeStep
+        updated = updateState consts initial
       updated `shouldSatisfy` \{ pos } -> hypotenuse pos > initialRadius
 
     it "should accelerate when velocity is negative" do
@@ -56,7 +57,7 @@ main = launchAff_ $ runSpec [consoleReporter] do
           masses,
           positions
         }
-        updated = updateState initial timeStep
+        updated = updateState consts initial
       updated `shouldSatisfy`
         \{ vel } -> abs vel.x > abs negativeVel.x && abs vel.y > abs negativeVel.y
 
@@ -69,6 +70,6 @@ main = launchAff_ $ runSpec [consoleReporter] do
           masses,
           positions
         }
-        updated = updateState initial timeStep
+        updated = updateState consts initial
       updated `shouldSatisfy`
         \{ vel } -> abs vel.x < abs positiveVel.x && abs vel.y < abs positiveVel.y
