@@ -88,8 +88,8 @@ scaleCanvas wind canv ctx = do
   width <- innerWidth wind
   height <- innerHeight wind
   let { pixelRatio: ratio } = config
-  setCanvasWidth canv (ratio * (toNumber width))
-  setCanvasHeight canv (ratio * (toNumber height))
+  setCanvasWidth canv $ ratio * toNumber width
+  setCanvasHeight canv $ ratio * toNumber height
   scale ctx { scaleX: ratio, scaleY: ratio }
 
 simulate :: Window -> Dimensions -> Context2D -> State -> Effect Unit
@@ -141,48 +141,37 @@ updateState state deltaTime =
     { pos, vel, masses } = state
 
     radius = hypotenuse pos
-    unitVect = { x: -pos.x / radius, y: -pos.y / radius }
+    unitVect = vmap (flip div radius <<< negate) pos
     currAccel = accel masses radius unitVect
     newPos = verletPos pos vel currAccel deltaTime
 
     newRadius = hypotenuse newPos
-    newUnitVect = { x: -newPos.x / newRadius, y: -newPos.y / newRadius }
+    newUnitVect = vmap (flip div newRadius <<< negate) newPos
     newAccel = accel masses newRadius newUnitVect
     newVel = verletVel vel currAccel newAccel deltaTime
-
-    a1 = masses.m2 / masses.total
-    a2 = masses.m1 / masses.total
   in
     {
       pos: newPos,
       vel: newVel,
       masses,
       positions: [
-        { x: a1 * newPos.x, y: a1 * newPos.y },
-        { x: -a2 * newPos.x, y: -a2 * newPos.y }
+        newPos `vmul` (masses.m2 / masses.total),
+        newPos `vmul` -(masses.m1 / masses.total)
       ]
     }
 
 accel :: Masses -> Number -> Vector -> Vector
-accel { m1, m2 } radius unitVect =
-  let
+accel { m1, m2 } radius unitv = unitv `vmul` scalar
+  where
     scalar = (consts.gravity * m1 * m2) / radius ** 2.0
-    accelX = scalar * unitVect.x
-    accelY = scalar * unitVect.y
-  in
-    { x: accelX, y: accelY }
 
 verletPos :: Vector -> Vector -> Vector -> Number -> Vector
-verletPos pos vel currAccel dt = {
-  x: pos.x + vel.x * dt + 0.5 * currAccel.x * dt ** 2.0,
-  y: pos.y + vel.y * dt + 0.5 * currAccel.y * dt ** 2.0
-}
+verletPos pos vel acc dt =
+  pos + (vel `vmul` dt) + (acc `vmul` (0.5 * dt ** 2.0))
 
 verletVel :: Vector -> Vector -> Vector -> Number -> Vector
-verletVel vel currAccel nextAccel dt = {
-  x: vel.x + 0.5 * (nextAccel.x + currAccel.x) * dt,
-  y: vel.y + 0.5 * (nextAccel.y + currAccel.y) * dt
-}
+verletVel vel currAccel nextAccel dt =
+  vel + ((currAccel + nextAccel) `vmul` (0.5 * dt))
 
 hypotenuse :: Vector -> Number
 hypotenuse { x, y } = sqrt (x ** 2.0 + y ** 2.0)
@@ -201,3 +190,9 @@ translatePos { width, height } { x, y } =
     centerY = y * scale + middleY
   in
     { x: centerX, y: centerY }
+
+vmap :: (Number -> Number) -> Vector -> Vector
+vmap f { x, y } = { x: f x, y: f y }
+
+vmul :: Vector -> Number -> Vector
+vmul { x, y } m = { x: m * x, y: m * y }
